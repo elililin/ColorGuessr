@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎨 Color Guessr</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: radial-gradient(circle at top left, #1e1b4b, #0f172a 60%, #020617);
+            min-height: 100vh;
+            color: #f8fafc;
+        }
+        h1, .font-display {
+            font-family: 'Fredoka', sans-serif;
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            70% { transform: scale(1.06); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop {
+            animation: popIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-6px); }
+            40%, 80% { transform: translateX(6px); }
+        }
+        .animate-shake {
+            animation: shake 0.35s ease-in-out;
+        }
+        .glass-card {
+            background: rgba(30, 41, 59, 0.72);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center p-4 sm:p-6">
+
+    <main class="w-full max-w-lg glass-card rounded-3xl p-6 sm:p-8 relative overflow-hidden">
+        <!-- Decorative glow -->
+        <div class="absolute -top-24 -right-24 w-48 h-48 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-24 -left-24 w-48 h-48 bg-pink-500/20 rounded-full blur-3xl pointer-events-none"></div>
+
+        <!-- Header -->
+        <header class="text-center mb-6 relative z-10">
+            <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/10 text-xs font-semibold tracking-wider uppercase text-indigo-300 mb-2">
+                <span>Stroop Effect Challenge</span>
+            </div>
+            <h1 class="text-3xl sm:text-4xl font-bold tracking-tight text-white">
+                🎨 COLOR GUESSR 🎨
+            </h1>
+            <p class="text-slate-300 text-sm mt-1">Guess the <span class="text-amber-300 font-semibold">color of the text</span>, not the word!</p>
+        </header>
+
+        <!-- SCREEN 1: START -->
+        <section id="screen-start" class="space-y-6 relative z-10">
+            <div class="bg-slate-900/60 border border-slate-700/70 rounded-2xl p-4">
+                <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 text-center">Color Dictionary (8 Colors)</h2>
+                <div id="vocab-list" class="grid grid-cols-2 gap-2 text-sm">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+            <div class="bg-indigo-950/50 border border-indigo-500/30 rounded-xl p-3.5 text-xs text-indigo-200 leading-relaxed">
+                <strong>Cara Bermain:</strong> Akan muncul nama warna dengan tinta warna acak selama <strong>5 ronde</strong>. Tebak <strong>warna tintanya</strong> dalam bahasa Inggris (ketik atau klik tombol pilihan).
+            </div>
+
+            <button id="btn-start" class="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-400 hover:to-pink-400 text-white font-bold text-lg shadow-lg shadow-indigo-500/30 transition transform active:scale-95 cursor-pointer">
+                Start Game (Press Enter)
+            </button>
+        </section>
+
+        <!-- SCREEN 2: COUNTDOWN -->
+        <section id="screen-countdown" class="hidden py-14 text-center space-y-4 relative z-10">
+            <p class="text-slate-300 font-medium text-lg">Game will start in...</p>
+            <div id="countdown-number" class="font-display text-7xl sm:text-8xl font-bold text-transparent bg-clip-text bg-gradient-to-b from-amber-300 to-orange-500 animate-pop">
+                3
+            </div>
+        </section>
+
+        <!-- SCREEN 3: GAMEPLAY -->
+        <section id="screen-game" class="hidden space-y-5 relative z-10">
+            <!-- Top status bar -->
+            <div class="flex items-center justify-between text-sm font-semibold bg-slate-900/70 px-4 py-2.5 rounded-xl border border-slate-700/60">
+                <span id="round-indicator" class="text-indigo-300">Round 1 dari 5</span>
+                <span id="score-indicator" class="text-emerald-400">Score: 0</span>
+            </div>
+
+            <!-- Stroop Word Display Card -->
+            <div class="bg-slate-100 rounded-2xl py-10 px-4 text-center shadow-inner border-4 border-slate-300/80">
+                <p class="text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">Guess the color:</p>
+                <div id="stroop-word" class="font-display text-5xl sm:text-6xl font-bold tracking-wider uppercase select-none drop-shadow-sm">
+                    RED
+                </div>
+            </div>
+
+            <!-- Input Form -->
+            <form id="answer-form" class="flex gap-2">
+                <input 
+                    type="text" 
+                    id="answer-input" 
+                    autocomplete="off" 
+                    placeholder="Ketik jawabanmu (mis. blue)..." 
+                    class="flex-1 bg-slate-900/90 border border-slate-600 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/30 rounded-xl px-4 py-3 text-white placeholder-slate-400 outline-none text-sm sm:text-base"
+                >
+                <button 
+                    type="submit" 
+                    id="btn-submit"
+                    class="px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm sm:text-base transition cursor-pointer"
+                >
+                    Submit
+                </button>
+            </form>
+
+            <!-- Quick Choice Buttons -->
+            <div>
+                <p class="text-xs text-slate-400 text-center mb-2">Atau klik langsung pilihan warna:</p>
+                <div id="quick-choices" class="grid grid-cols-4 gap-2">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+            <!-- Feedback Banner -->
+            <div id="feedback-box" class="hidden rounded-xl p-3.5 text-center font-semibold text-sm"></div>
+        </section>
+
+        <!-- SCREEN 4: GAME OVER -->
+        <section id="screen-gameover" class="hidden text-center space-y-6 relative z-10">
+            <div class="space-y-2">
+                <div id="result-emoji" class="text-6xl animate-pop">🏆</div>
+                <h2 class="font-display text-3xl font-bold text-white">GAME OVER!</h2>
+                <p class="text-slate-300 text-base">
+                    Your final score: <span id="final-score" class="text-2xl font-bold text-amber-400">5/5</span>
+                </p>
+            </div>
+
+            <div id="result-message" class="bg-slate-900/70 border border-slate-700 rounded-2xl p-4 text-sm sm:text-base font-medium text-indigo-200">
+                Awesome! Your English skills are perfect!
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-3">
+                <button id="btn-replay" class="flex-1 py-3 px-5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold shadow-lg shadow-emerald-500/20 transition cursor-pointer">
+                    🔄 Play Again (Y)
+                </button>
+                <button id="btn-quit" class="py-3 px-5 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold transition cursor-pointer">
+                    Quit (N)
+                </button>
+            </div>
+        </section>
+
+        <!-- SCREEN 5: GOODBYE -->
+        <section id="screen-goodbye" class="hidden py-10 text-center space-y-5 relative z-10">
+            <div class="text-5xl">👋</div>
+            <h2 class="font-display text-2xl sm:text-3xl font-bold text-white">Thank you for playing!</h2>
+            <p class="text-slate-300 text-sm">See you later! Semangat terus belajar bahasa Inggrisnya.</p>
+            <button id="btn-back-home" class="mt-2 py-2.5 px-6 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition cursor-pointer">
+                Kembali ke Menu Utama
+            </button>
+        </section>
+    </main>
+
+    <script>
+        const COLORS = {
+            red:    { id: 'merah',         hex: '#DC2626', btnBg: 'bg-red-600 hover:bg-red-500' },
+            blue:   { id: 'biru',          hex: '#2563EB', btnBg: 'bg-blue-600 hover:bg-blue-500' },
+            green:  { id: 'hijau',         hex: '#16A34A', btnBg: 'bg-green-600 hover:bg-green-500' },
+            yellow: { id: 'kuning',        hex: '#EAB308', btnBg: 'bg-yellow-500 hover:bg-yellow-400 text-slate-950' },
+            purple: { id: 'ungu',          hex: '#9333EA', btnBg: 'bg-purple-600 hover:bg-purple-500' },
+            orange: { id: 'jingga/oranye', hex: '#EA580C', btnBg: 'bg-orange-600 hover:bg-orange-500' },
+            pink:   { id: 'merah muda',    hex: '#EC4899', btnBg: 'bg-pink-500 hover:bg-pink-400' },
+            brown:  { id: 'cokelat',       hex: '#78350F', btnBg: 'bg-amber-900 hover:bg-amber-800' }
+        };
+
+        const colorKeys = Object.keys(COLORS);
+        const totalRounds = 5;
+        let currentRound = 1;
+        let score = 0;
+        let currentInkColor = '';
+        let isWaitingNext = false;
+        let currentScreen = 'start';
+
+        // Elements
+        const screens = {
+            start: document.getElementById('screen-start'),
+            countdown: document.getElementById('screen-countdown'),
+            game: document.getElementById('screen-game'),
+            gameover: document.getElementById('screen-gameover'),
+            goodbye: document.getElementById('screen-goodbye')
+        };
+
+        function showScreen(name) {
+            currentScreen = name;
+            Object.values(screens).forEach(el => el.classList.add('hidden'));
+            screens[name].classList.remove('hidden');
+        }
+
+        // Populate Dictionary & Quick Buttons
+        function initUI() {
+            const vocabList = document.getElementById('vocab-list');
+            const quickChoices = document.getElementById('quick-choices');
+            vocabList.innerHTML = '';
+            quickChoices.innerHTML = '';
+
+            colorKeys.forEach(key => {
+                const info = COLORS[key];
+
+                // Dictionary item
+                const item = document.createElement('div');
+                item.className = 'flex items-center gap-2 bg-slate-800/80 px-2.5 py-1.5 rounded-lg border border-slate-700/50';
+                item.innerHTML = `
+                    <span class="w-3.5 h-3.5 rounded-full shrink-0 border border-white/30" style="background-color: ${info.hex}"></span>
+                    <span class="font-bold text-white capitalize">${key}</span>
+                    <span class="text-slate-400 text-xs truncate">(${info.id})</span>
+                `;
+                vocabList.appendChild(item);
+
+                // Quick choice button
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.textContent = key;
+                btn.className = `${info.btnBg} text-white font-bold text-xs sm:text-sm py-2.5 px-2 rounded-xl capitalize shadow transition transform active:scale-95 cursor-pointer`;
+                btn.addEventListener('click', () => handleGuess(key));
+                quickChoices.appendChild(btn);
+            });
+        }
+
+        function startCountdown() {
+            showScreen('countdown');
+            const countEl = document.getElementById('countdown-number');
+            const steps = ['3', '2', '1', 'Start!'];
+            let idx = 0;
+
+            countEl.textContent = steps[0];
+            countEl.classList.remove('animate-pop');
+            void countEl.offsetWidth;
+            countEl.classList.add('animate-pop');
+
+            const timer = setInterval(() => {
+                idx++;
+                if (idx < steps.length) {
+                    countEl.textContent = steps[idx];
+                    countEl.classList.remove('animate-pop');
+                    void countEl.offsetWidth;
+                    countEl.classList.add('animate-pop');
+                } else {
+                    clearInterval(timer);
+                    startGame();
+                }
+            }, 850);
+        }
+
+        function startGame() {
+            score = 0;
+            currentRound = 1;
+            showScreen('game');
+            nextRound();
+        }
+
+        function nextRound() {
+            isWaitingNext = false;
+            document.getElementById('round-indicator').textContent = `Round ${currentRound} dari ${totalRounds}`;
+            document.getElementById('score-indicator').textContent = `Score: ${score}`;
+
+            const feedbackBox = document.getElementById('feedback-box');
+            feedbackBox.classList.add('hidden');
+
+            const input = document.getElementById('answer-input');
+            input.value = '';
+            input.disabled = false;
+            document.getElementById('btn-submit').disabled = false;
+            input.focus();
+
+            // Pick random word and random ink color
+            const textWord = colorKeys[Math.floor(Math.random() * colorKeys.length)];
+            currentInkColor = colorKeys[Math.floor(Math.random() * colorKeys.length)];
+
+            const wordEl = document.getElementById('stroop-word');
+            wordEl.textContent = textWord.toUpperCase();
+            wordEl.style.color = COLORS[currentInkColor].hex;
+            wordEl.classList.remove('animate-pop');
+            void wordEl.offsetWidth;
+            wordEl.classList.add('animate-pop');
+        }
+
+        function handleGuess(rawGuess) {
+            if (isWaitingNext || currentScreen !== 'game') return;
+            const answer = rawGuess.trim().toLowerCase();
+            if (!answer) return;
+
+            isWaitingNext = true;
+            const input = document.getElementById('answer-input');
+            input.disabled = true;
+            document.getElementById('btn-submit').disabled = true;
+
+            const feedbackBox = document.getElementById('feedback-box');
+            feedbackBox.classList.remove('hidden', 'bg-emerald-500/20', 'border-emerald-500/50', 'text-emerald-300', 'bg-rose-500/20', 'border-rose-500/50', 'text-rose-300', 'animate-shake');
+
+            if (answer === currentInkColor) {
+                score++;
+                document.getElementById('score-indicator').textContent = `Score: ${score}`;
+                feedbackBox.classList.add('bg-emerald-500/20', 'border', 'border-emerald-500/50', 'text-emerald-300');
+                feedbackBox.textContent = '✅ Correct! Great job!';
+            } else {
+                feedbackBox.classList.add('bg-rose-500/20', 'border', 'border-rose-500/50', 'text-rose-300', 'animate-shake');
+                feedbackBox.textContent = `❌ Wrong! The correct color is '${currentInkColor}' (${COLORS[currentInkColor].id}).`;
+            }
+
+            setTimeout(() => {
+                if (currentRound < totalRounds) {
+                    currentRound++;
+                    nextRound();
+                } else {
+                    endGame();
+                }
+            }, 1350);
+        }
+
+        function endGame() {
+            showScreen('gameover');
+            document.getElementById('final-score').textContent = `${score}/${totalRounds}`;
+
+            const emojiEl = document.getElementById('result-emoji');
+            const msgEl = document.getElementById('result-message');
+
+            if (score === totalRounds) {
+                emojiEl.textContent = '🏆';
+                msgEl.textContent = 'Awesome! Your English skills are perfect!';
+            } else if (score >= 3) {
+                emojiEl.textContent = '👍';
+                msgEl.textContent = 'Good job. Keep on practicing your English!';
+            } else {
+                emojiEl.textContent = '💪';
+                msgEl.textContent = "Don't give up, let's try again!";
+            }
+        }
+
+        // Event Listeners
+        document.getElementById('btn-start').addEventListener('click', startCountdown);
+        document.getElementById('btn-replay').addEventListener('click', startCountdown);
+        document.getElementById('btn-quit').addEventListener('click', () => showScreen('goodbye'));
+        document.getElementById('btn-back-home').addEventListener('click', () => showScreen('start'));
+
+        document.getElementById('answer-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            handleGuess(document.getElementById('answer-input').value);
+        });
+
+        // Keyboard shortcuts (Enter on Start, Y/N on Game Over)
+        document.addEventListener('keydown', (e) => {
+            if (currentScreen === 'start' && e.key === 'Enter') {
+                e.preventDefault();
+                startCountdown();
+            } else if (currentScreen === 'gameover') {
+                if (e.key.toLowerCase() === 'y' || e.key === 'Enter') {
+                    startCountdown();
+                } else if (e.key.toLowerCase() === 'n') {
+                    showScreen('goodbye');
+                }
+            }
+        });
+
+        initUI();
+    </script>
+</body>
+</html>
